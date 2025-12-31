@@ -398,15 +398,18 @@
                 pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 pCtx.fill();
 
-                // 添加发光效果
-                pCtx.shadowBlur = 15;
-                pCtx.shadowColor = this.color + '0.5)';
+                // 移动端减少发光效果
+                if (!isMobile) {
+                    pCtx.shadowBlur = 15;
+                    pCtx.shadowColor = this.color + '0.5)';
+                }
             }
         }
 
-        // 创建粒子
+        // 创建粒子（移动端减少粒子数量）
         const particles = [];
-        const particleCount = 60;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const particleCount = isMobile ? 20 : 60;
 
         // 动画帧ID（用于暂停）
         let animationFrameId;
@@ -416,14 +419,19 @@
             particles.push(new Particle());
         }
 
-        // 连接粒子
+        // 连接粒子（移动端减少连线计算）
         function connectParticles() {
+            const maxConnections = isMobile ? 30 : particles.length * (particles.length - 1) / 2;
+            let connections = 0;
+
             for (let i = 0; i < particles.length; i++) {
                 for (let j = i + 1; j < particles.length; j++) {
+                    if (connections >= maxConnections) break;
+
                     const dx = particles[i].x - particles[j].x;
                     const dy = particles[i].y - particles[j].y;
                     const distanceSq = dx * dx + dy * dy;
-                    const connectDistance = 80;
+                    const connectDistance = isMobile ? 60 : 80;
 
                     if (distanceSq < connectDistance * connectDistance) {
                         const distance = Math.sqrt(distanceSq);
@@ -434,6 +442,7 @@
                         pCtx.moveTo(particles[i].x, particles[i].y);
                         pCtx.lineTo(particles[j].x, particles[j].y);
                         pCtx.stroke();
+                        connections++;
                     }
                 }
             }
@@ -514,14 +523,18 @@
                     fCtx.fill();
                 }
 
-                // 绘制粒子
+                // 绘制粒子（移动端减少发光）
                 fCtx.fillStyle = this.color.replace('1)', `${this.opacity})`);
-                fCtx.shadowBlur = 10;
-                fCtx.shadowColor = this.color;
+                if (!isMobile) {
+                    fCtx.shadowBlur = 10;
+                    fCtx.shadowColor = this.color;
+                }
                 fCtx.beginPath();
                 fCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 fCtx.fill();
-                fCtx.shadowBlur = 0;
+                if (!isMobile) {
+                    fCtx.shadowBlur = 0;
+                }
             }
         }
 
@@ -540,7 +553,8 @@
                 'rgba(255, 0, 128, 1)'
             ];
             const color = colors[Math.floor(Math.random() * colors.length)];
-            const particleCount = 50;
+            // 移动端减少烟花粒子
+            const particleCount = isMobile ? 30 : 50;
 
             for (let i = 0; i < particleCount; i++) {
                 fireworks.push(new FireworkParticle(x, y, color));
@@ -580,12 +594,13 @@
             setTimeout(() => createFirework(e.clientX + (Math.random() - 0.5) * 100, e.clientY + (Math.random() - 0.5) * 100), 200);
         });
 
-        // 自动随机烟花
+        // 自动随机烟花（移动端减少频率）
+        const autoFireworkInterval = isMobile ? 8000 : 4000;
         setInterval(() => {
             const x = Math.random() * fireworkCanvas.width;
             const y = Math.random() * fireworkCanvas.height * 0.6 + fireworkCanvas.height * 0.1;
             createFirework(x, y);
-        }, 4000);
+        }, autoFireworkInterval);
 
         // ===== 倒计时 =====
         function updateCountdown() {
