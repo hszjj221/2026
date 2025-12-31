@@ -417,6 +417,10 @@
         const particles = [];
         const particleCount = 60;
 
+        // 动画帧ID（用于暂停）
+        let animationFrameId;
+        let fireworkAnimationFrameId = null;
+
         for (let i = 0; i < particleCount; i++) {
             particles.push(new Particle());
         }
@@ -454,10 +458,24 @@
             }
 
             connectParticles();
-            requestAnimationFrame(animateParticles);
+            animationFrameId = requestAnimationFrame(animateParticles);
         }
 
         animateParticles();
+
+        // 页面不可见时暂停动画
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                cancelAnimationFrame(animationFrameId);
+                cancelAnimationFrame(fireworkAnimationFrameId);
+                fireworkAnimationFrameId = null;
+            } else {
+                animateParticles();
+                if (fireworks.length > 0) {
+                    animateFireworks();
+                }
+            }
+        });
 
         // ===== 烟花系统 =====
 
@@ -536,8 +554,14 @@
             for (let i = 0; i < particleCount; i++) {
                 fireworks.push(new FireworkParticle(x, y, color));
             }
+
+            // 启动烟花动画（如果还没运行）
+            if (!fireworkAnimationFrameId) {
+                animateFireworks();
+            }
         }
 
+        // 烟花动画（只在有烟花时运行）
         function animateFireworks() {
             fCtx.clearRect(0, 0, fireworkCanvas.width, fireworkCanvas.height);
 
@@ -550,10 +574,12 @@
                 }
             }
 
-            requestAnimationFrame(animateFireworks);
+            if (fireworks.length > 0) {
+                fireworkAnimationFrameId = requestAnimationFrame(animateFireworks);
+            } else {
+                fireworkAnimationFrameId = null;
+            }
         }
-
-        animateFireworks();
 
         // 点击创建烟花
         window.addEventListener('click', (e) => {
