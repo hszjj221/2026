@@ -114,7 +114,7 @@
             z-index: -1;
             animation: borderGlow 3s ease infinite;
             filter: blur(10px);
-            opacity: 0.5;
+            opacity: 0;
         }
 
         @keyframes borderGlow {
@@ -216,6 +216,10 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             transition: all 0.3s ease-in-out;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', 'Source Code Pro', monospace;
+            font-variant-numeric: tabular-nums;
+            min-width: 1.2em;
+            text-align: center;
         }
 
         .countdown-label {
@@ -363,17 +367,70 @@
     <div class="mouse-hint">移动鼠标与粒子互动 · 点击屏幕释放烟花</div>
 
     <script>
+        // ===== 配置常量 =====
+        const CONFIG = {
+            // 移动端检测
+            isMobile: 'ontouchstart' in window || window.matchMedia('(max-width: 768px)').matches,
+
+            // 粒子配置
+            particle: {
+                count: 'ontouchstart' in window || window.matchMedia('(max-width: 768px)').matches ? 20 : 60,
+                connectDistance: 'ontouchstart' in window || window.matchMedia('(max-width: 768px)').matches ? 60 : 80,
+                maxConnections: 'ontouchstart' in window || window.matchMedia('(max-width: 768px)').matches ? 30 : null,  // null 表示不限制
+                shadowBlur: 15,
+            },
+
+            // 鼠标交互
+            mouse: {
+                radius: 150,
+                forceMultiplier: 2,
+            },
+
+            // 烟花配置
+            firework: {
+                particleCount: 'ontouchstart' in window || window.matchMedia('(max-width: 768px)').matches ? 30 : 50,
+                shadowBlur: 10,
+                autoInterval: 'ontouchstart' in window || window.matchMedia('(max-width: 768px)').matches ? 8000 : 4000,
+                celebrationInterval: 1500,
+            },
+
+            // 倒计时配置
+            countdown: {
+                animationDuration: 150,
+            },
+        };
+
+        // 修正 maxConnections（桌面端不限制）
+        CONFIG.particle.maxConnections = CONFIG.isMobile ? 30 : CONFIG.particle.count * (CONFIG.particle.count - 1) / 2;
+
         // ===== Canvas 初始化 =====
         const particleCanvas = document.getElementById('particle-canvas');
         const pCtx = particleCanvas.getContext('2d');
         const fireworkCanvas = document.getElementById('firework-canvas');
         const fCtx = fireworkCanvas.getContext('2d');
 
+        // 烟花颜色常量
+        const FIREWORK_COLORS = [
+            'rgba(255, 107, 107, 1)',
+            'rgba(78, 205, 196, 1)',
+            'rgba(69, 183, 209, 1)',
+            'rgba(255, 160, 122, 1)',
+            'rgba(152, 216, 200, 1)',
+            'rgba(247, 220, 111, 1)',
+            'rgba(187, 143, 206, 1)',
+            'rgba(255, 215, 0, 1)',
+            'rgba(255, 0, 128, 1)'
+        ];
+
+        let resizeTimer;
         function resizeCanvas() {
-            particleCanvas.width = window.innerWidth;
-            particleCanvas.height = window.innerHeight;
-            fireworkCanvas.width = window.innerWidth;
-            fireworkCanvas.height = window.innerHeight;
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                particleCanvas.width = window.innerWidth;
+                particleCanvas.height = window.innerHeight;
+                fireworkCanvas.width = window.innerWidth;
+                fireworkCanvas.height = window.innerHeight;
+            }, 150);
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
@@ -381,7 +438,7 @@
         // ===== 粒子系统 =====
 
         // 鼠标位置
-        let mouse = { x: null, y: null, radius: 150 };
+        let mouse = { x: null, y: null, radius: CONFIG.mouse.radius };
 
         window.addEventListener('mousemove', (e) => {
             mouse.x = e.x;
@@ -418,8 +475,8 @@
                         const directionX = dx / distance;
                         const directionY = dy / distance;
 
-                        this.x -= directionX * force * 2;
-                        this.y -= directionY * force * 2;
+                        this.x -= directionX * force * CONFIG.mouse.forceMultiplier;
+                        this.y -= directionY * force * CONFIG.mouse.forceMultiplier;
                         this.size = this.baseSize * (1 + force * 2);
                     } else {
                         this.size = this.baseSize;
@@ -439,19 +496,12 @@
                 pCtx.beginPath();
                 pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 pCtx.fill();
-
-                // 移动端减少发光效果
-                if (!isMobile) {
-                    pCtx.shadowBlur = 15;
-                    pCtx.shadowColor = this.color + '0.5)';
-                }
             }
         }
 
-        // 创建粒子（移动端减少粒子数量）
+        // 创建粒子
         const particles = [];
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const particleCount = isMobile ? 20 : 60;
+        const particleCount = CONFIG.particle.count;
 
         // 动画帧ID（用于暂停）
         let animationFrameId;
@@ -461,9 +511,11 @@
             particles.push(new Particle());
         }
 
-        // 连接粒子（移动端减少连线计算）
+        // 连接粒子
         function connectParticles() {
-            const maxConnections = isMobile ? 30 : particles.length * (particles.length - 1) / 2;
+            const maxConnections = CONFIG.particle.maxConnections;
+            const connectDistance = CONFIG.particle.connectDistance;
+            const maxDistanceSq = connectDistance * connectDistance;
             let connections = 0;
 
             for (let i = 0; i < particles.length; i++) {
@@ -473,9 +525,8 @@
                     const dx = particles[i].x - particles[j].x;
                     const dy = particles[i].y - particles[j].y;
                     const distanceSq = dx * dx + dy * dy;
-                    const connectDistance = isMobile ? 60 : 80;
 
-                    if (distanceSq < connectDistance * connectDistance) {
+                    if (distanceSq < maxDistanceSq) {
                         const distance = Math.sqrt(distanceSq);
                         const opacity = (1 - distance / connectDistance) * 0.15;
                         pCtx.strokeStyle = `rgba(150, 150, 255, ${opacity})`;
@@ -511,10 +562,20 @@
                 cancelAnimationFrame(animationFrameId);
                 cancelAnimationFrame(fireworkAnimationFrameId);
                 fireworkAnimationFrameId = null;
+                // 暂停庆典模式定时器
+                if (celebrationTimer) {
+                    clearInterval(celebrationTimer);
+                }
             } else {
                 animateParticles();
                 if (fireworks.length > 0) {
                     animateFireworks();
+                }
+                // 恢复庆典模式定时器
+                if (isCelebrated && celebrationTimer) {
+                    celebrationTimer = setInterval(() => {
+                        createFirework(Math.random() * window.innerWidth, Math.random() * window.innerHeight * 0.7);
+                    }, CONFIG.firework.celebrationInterval);
                 }
             }
         });
@@ -565,38 +626,19 @@
                     fCtx.fill();
                 }
 
-                // 绘制粒子（移动端减少发光）
+                // 绘制粒子
                 fCtx.fillStyle = this.color.replace('1)', `${this.opacity})`);
-                if (!isMobile) {
-                    fCtx.shadowBlur = 10;
-                    fCtx.shadowColor = this.color;
-                }
                 fCtx.beginPath();
                 fCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 fCtx.fill();
-                if (!isMobile) {
-                    fCtx.shadowBlur = 0;
-                }
             }
         }
 
         let fireworks = [];
 
         function createFirework(x, y) {
-            const colors = [
-                'rgba(255, 107, 107, 1)',
-                'rgba(78, 205, 196, 1)',
-                'rgba(69, 183, 209, 1)',
-                'rgba(255, 160, 122, 1)',
-                'rgba(152, 216, 200, 1)',
-                'rgba(247, 220, 111, 1)',
-                'rgba(187, 143, 206, 1)',
-                'rgba(255, 215, 0, 1)',
-                'rgba(255, 0, 128, 1)'
-            ];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            // 移动端减少烟花粒子
-            const particleCount = isMobile ? 30 : 50;
+            const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+            const particleCount = CONFIG.firework.particleCount;
 
             for (let i = 0; i < particleCount; i++) {
                 fireworks.push(new FireworkParticle(x, y, color));
@@ -615,7 +657,9 @@
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 fireworks[i].update();
                 fireworks[i].draw();
+            }
 
+            for (let i = fireworks.length - 1; i >= 0; i--) {
                 if (fireworks[i].opacity <= 0) {
                     fireworks.splice(i, 1);
                 }
@@ -636,13 +680,15 @@
             setTimeout(() => createFirework(e.clientX + (Math.random() - 0.5) * 100, e.clientY + (Math.random() - 0.5) * 100), 200);
         });
 
-        // 自动随机烟花（移动端减少频率）
-        const autoFireworkInterval = isMobile ? 8000 : 4000;
-        const autoFireworkTick = setInterval(() => {
+        // 自动随机烟花
+        let autoFireworkTick = setInterval(() => {
             const x = Math.random() * fireworkCanvas.width;
             const y = Math.random() * fireworkCanvas.height * 0.6 + fireworkCanvas.height * 0.1;
             createFirework(x, y);
-        }, autoFireworkInterval);
+        }, CONFIG.firework.autoInterval);
+
+        // 庆典模式定时器引用（用于清理）
+        let celebrationTimer = null;
 
         // ===== 倒计时 =====
         const targetDate = new Date('2026-01-01T00:00:00');
@@ -680,7 +726,7 @@
                     el.textContent = newVal;
                     el.style.transform = 'translateY(0)';
                     el.style.opacity = '1';
-                }, 150);
+                }, CONFIG.countdown.animationDuration);
             }
         }
 
@@ -689,19 +735,19 @@
             document.body.classList.add('celebration');
             document.querySelector('h1').textContent = '2026 新年快乐！';
             document.querySelector('.wishes').innerHTML = '跨年钟声已敲响<br>愿你在新的一年里<br>眼里有星辰 身边有暖阳';
-            
+
             // 爆发式烟花
             for(let i=0; i<10; i++) {
                 setTimeout(() => {
                     createFirework(Math.random() * window.innerWidth, Math.random() * window.innerHeight * 0.5);
                 }, i * 300);
             }
-            
-            // 提高自动烟花频率
+
+            // 提高自动烟花频率，并保存定时器引用
             clearInterval(autoFireworkTick);
-            setInterval(() => {
+            celebrationTimer = setInterval(() => {
                 createFirework(Math.random() * window.innerWidth, Math.random() * window.innerHeight * 0.7);
-            }, 1500);
+            }, CONFIG.firework.celebrationInterval);
         }
 
         updateCountdown();
@@ -711,6 +757,14 @@
         setTimeout(() => createFirework(window.innerWidth / 2, window.innerHeight / 3), 500);
         setTimeout(() => createFirework(window.innerWidth / 3, window.innerHeight / 2.5), 1000);
         setTimeout(() => createFirework(window.innerWidth * 2 / 3, window.innerHeight / 2.5), 1500);
+
+        // 移动端提示自适应
+        const mouseHint = document.querySelector('.mouse-hint');
+        if (mouseHint) {
+            mouseHint.textContent = CONFIG.isMobile
+                ? '点击屏幕释放烟花'
+                : '移动鼠标与粒子互动 · 点击屏幕释放烟花';
+        }
     </script>
 </body>
 </html>
