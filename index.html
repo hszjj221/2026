@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 新年快乐 | 跨年倒计时</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Canvas 粒子背景 */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 爆炸烟花 Canvas */
+        #firework-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 光晕效果 */
+        .aurora {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.3;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(120, 80, 255, 0.4) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255, 80, 120, 0.4) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 60%, rgba(80, 200, 255, 0.4) 0%, transparent 50%);
+            animation: auroraMove 15s ease-in-out infinite;
+        }
+
+        @keyframes auroraMove {
+            0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.3; }
+            50% { transform: scale(1.1) rotate(5deg); opacity: 0.5; }
+        }
+
+        /* 主容器 */
+        .container {
+            text-align: center;
+            color: white;
+            z-index: 10;
+            padding: 40px;
+            position: relative;
+        }
+
+        /* 发光边框效果 */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0, #ff0080);
+            background-size: 400% 400%;
+            border-radius: 30px;
+            z-index: -1;
+            animation: borderGlow 3s ease infinite;
+            filter: blur(10px);
+            opacity: 0.5;
+        }
+
+        @keyframes borderGlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 0, 128, 0.3);
+            animation: textFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes textFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .year {
+            font-size: 8rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #FFD700, #FFA500, #FF6B6B, #ff0080, #7928CA, #FF0080);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientFlow 4s ease infinite, yearPulse 2s ease-in-out infinite;
+            margin: 20px 0;
+            filter: drop-shadow(0 0 30px rgba(255, 100, 100, 0.5));
+        }
+
+        @keyframes gradientFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes yearPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        /* 倒计时样式 */
+        .countdown {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+
+        .countdown-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 30px;
+            min-width: 120px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .countdown-item::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .countdown-item:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                0 0 40px rgba(255, 100, 150, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .countdown-number {
+            font-size: 4rem;
+            font-weight: bold;
+            display: block;
+            text-shadow: 0 0 20px currentColor;
+            background: linear-gradient(180deg, #ffffff 0%, #a0a0a0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .countdown-label {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* 祝福语 */
+        .wishes {
+            font-size: 1.5rem;
+            margin-top: 40px;
+            opacity: 0.95;
+            line-height: 2;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 0.95;
+                transform: translateY(0);
+            }
+        }
+
+        /* 鼠标跟随提示 */
+        .mouse-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            z-index: 100;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .year {
+                font-size: 4rem;
+            }
+            .countdown {
+                gap: 15px;
+            }
+            .countdown-item {
+                min-width: 80px;
+                padding: 20px;
+            }
+            .countdown-number {
+                font-size: 2.5rem;
+            }
+            .countdown-label {
+                font-size: 1rem;
+            }
+            .wishes {
+                font-size: 1.2rem;
+            }
+            .mouse-hint {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 极光背景 -->
+    <div class="aurora"></div>
+
+    <!-- 粒子 Canvas -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- 烟花 Canvas -->
+    <canvas id="firework-canvas"></canvas>
+
+    <!-- 主内容 -->
+    <div class="container">
+        <h1>新年倒计时</h1>
+        <div class="year">2026</div>
+        <div class="countdown">
+            <div class="countdown-item">
+                <span class="countdown-number" id="days">00</span>
+                <span class="countdown-label">天</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-number" id="hours">00</span>
+                <span class="countdown-label">时</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-number" id="minutes">00</span>
+                <span class="countdown-label">分</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-number" id="seconds">00</span>
+                <span class="countdown-label">秒</span>
+            </div>
+        </div>
+        <div class="wishes">
+            愿新的一年<br>
+            万事如意 心想事成<br>
+            前程似锦 未来可期
+        </div>
+    </div>
+
+    <div class="mouse-hint">移动鼠标与粒子互动 · 点击屏幕释放烟花</div>
+
+    <script>
+        // ===== 粒子系统 =====
+        const particleCanvas = document.getElementById('particle-canvas');
+        const pCtx = particleCanvas.getContext('2d');
+
+        function resizeCanvas() {
+            particleCanvas.width = window.innerWidth;
+            particleCanvas.height = window.innerHeight;
+            fireworkCanvas.width = window.innerWidth;
+            fireworkCanvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 鼠标位置
+        let mouse = { x: null, y: null, radius: 150 };
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+
+        window.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        // 粒子类
+        class Particle {
+            constructor() {
+                this.x = Math.random() * particleCanvas.width;
+                this.y = Math.random() * particleCanvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.baseSize = this.size;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.color = `hsla(${Math.random() * 60 + 200}, 70%, 60%,`;
+                this.opacity = Math.random() * 0.5 + 0.2;
+            }
+
+            update() {
+                // 鼠标交互
+                if (mouse.x !== null) {
+                    const dx = mouse.x - this.x;
+                    const dy = mouse.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < mouse.radius) {
+                        const force = (mouse.radius - distance) / mouse.radius;
+                        const directionX = dx / distance;
+                        const directionY = dy / distance;
+
+                        this.x -= directionX * force * 2;
+                        this.y -= directionY * force * 2;
+                        this.size = this.baseSize * (1 + force * 2);
+                    } else {
+                        this.size = this.baseSize;
+                    }
+                }
+
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // 边界检测
+                if (this.x < 0 || this.x > particleCanvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > particleCanvas.height) this.speedY *= -1;
+            }
+
+            draw() {
+                pCtx.fillStyle = this.color + this.opacity + ')';
+                pCtx.beginPath();
+                pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                pCtx.fill();
+
+                // 添加发光效果
+                pCtx.shadowBlur = 15;
+                pCtx.shadowColor = this.color + '0.5)';
+            }
+        }
+
+        // 创建粒子
+        const particles = [];
+        const particleCount = 150;
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        // 连接粒子
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 100) {
+                        const opacity = (1 - distance / 100) * 0.2;
+                        pCtx.strokeStyle = `rgba(150, 150, 255, ${opacity})`;
+                        pCtx.lineWidth = 0.5;
+                        pCtx.beginPath();
+                        pCtx.moveTo(particles[i].x, particles[i].y);
+                        pCtx.lineTo(particles[j].x, particles[j].y);
+                        pCtx.stroke();
+                    }
+                }
+            }
+        }
+
+        // 动画粒子
+        function animateParticles() {
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+
+            for (const particle of particles) {
+                particle.update();
+                particle.draw();
+            }
+
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+
+        animateParticles();
+
+        // ===== 烟花系统 =====
+        const fireworkCanvas = document.getElementById('firework-canvas');
+        const fCtx = fireworkCanvas.getContext('2d');
+
+        class FireworkParticle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = Math.random() * 3 + 1;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 8 + 2;
+                this.speedX = Math.cos(angle) * speed;
+                this.speedY = Math.sin(angle) * speed;
+                this.gravity = 0.15;
+                this.friction = 0.98;
+                this.opacity = 1;
+                this.decay = Math.random() * 0.015 + 0.01;
+                this.trail = [];
+                this.trailLength = 5;
+            }
+
+            update() {
+                this.trail.push({ x: this.x, y: this.y, opacity: this.opacity });
+                if (this.trail.length > this.trailLength) {
+                    this.trail.shift();
+                }
+
+                this.speedX *= this.friction;
+                this.speedY *= this.friction;
+                this.speedY += this.gravity;
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.opacity -= this.decay;
+                this.size *= 0.98;
+            }
+
+            draw() {
+                // 绘制拖尾
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    const trailOpacity = (i / this.trail.length) * this.opacity * 0.5;
+                    fCtx.fillStyle = this.color.replace('1)', `${trailOpacity})`);
+                    fCtx.beginPath();
+                    fCtx.arc(t.x, t.y, this.size * (i / this.trail.length), 0, Math.PI * 2);
+                    fCtx.fill();
+                }
+
+                // 绘制粒子
+                fCtx.fillStyle = this.color.replace('1)', `${this.opacity})`);
+                fCtx.shadowBlur = 10;
+                fCtx.shadowColor = this.color;
+                fCtx.beginPath();
+                fCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                fCtx.fill();
+                fCtx.shadowBlur = 0;
+            }
+        }
+
+        let fireworks = [];
+
+        function createFirework(x, y) {
+            const colors = [
+                'rgba(255, 107, 107, 1)',
+                'rgba(78, 205, 196, 1)',
+                'rgba(69, 183, 209, 1)',
+                'rgba(255, 160, 122, 1)',
+                'rgba(152, 216, 200, 1)',
+                'rgba(247, 220, 111, 1)',
+                'rgba(187, 143, 206, 1)',
+                'rgba(255, 215, 0, 1)',
+                'rgba(255, 0, 128, 1)'
+            ];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const particleCount = 80;
+
+            for (let i = 0; i < particleCount; i++) {
+                fireworks.push(new FireworkParticle(x, y, color));
+            }
+        }
+
+        function animateFireworks() {
+            fCtx.clearRect(0, 0, fireworkCanvas.width, fireworkCanvas.height);
+
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                fireworks[i].update();
+                fireworks[i].draw();
+
+                if (fireworks[i].opacity <= 0) {
+                    fireworks.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(animateFireworks);
+        }
+
+        animateFireworks();
+
+        // 点击创建烟花
+        window.addEventListener('click', (e) => {
+            createFirework(e.clientX, e.clientY);
+            // 创建额外的爆炸效果
+            setTimeout(() => createFirework(e.clientX + (Math.random() - 0.5) * 100, e.clientY + (Math.random() - 0.5) * 100), 100);
+            setTimeout(() => createFirework(e.clientX + (Math.random() - 0.5) * 100, e.clientY + (Math.random() - 0.5) * 100), 200);
+        });
+
+        // 自动随机烟花
+        setInterval(() => {
+            const x = Math.random() * fireworkCanvas.width;
+            const y = Math.random() * fireworkCanvas.height * 0.6 + fireworkCanvas.height * 0.1;
+            createFirework(x, y);
+        }, 2000);
+
+        // ===== 倒计时 =====
+        function updateCountdown() {
+            const now = new Date();
+            const newYear = new Date(now.getFullYear() + 1, 0, 1);
+            const diff = newYear - now;
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('days').textContent = String(days).padStart(2, '0');
+            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        // 初始烟花
+        setTimeout(() => createFirework(window.innerWidth / 2, window.innerHeight / 3), 500);
+        setTimeout(() => createFirework(window.innerWidth / 3, window.innerHeight / 2.5), 1000);
+        setTimeout(() => createFirework(window.innerWidth * 2 / 3, window.innerHeight / 2.5), 1500);
+    </script>
+</body>
+</html>
