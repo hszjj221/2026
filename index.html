@@ -309,9 +309,11 @@
     <div class="mouse-hint">移动鼠标与粒子互动 · 点击屏幕释放烟花</div>
 
     <script>
-        // ===== 粒子系统 =====
+        // ===== Canvas 初始化 =====
         const particleCanvas = document.getElementById('particle-canvas');
         const pCtx = particleCanvas.getContext('2d');
+        const fireworkCanvas = document.getElementById('firework-canvas');
+        const fCtx = fireworkCanvas.getContext('2d');
 
         function resizeCanvas() {
             particleCanvas.width = window.innerWidth;
@@ -321,6 +323,8 @@
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
+
+        // ===== 粒子系统 =====
 
         // 鼠标位置
         let mouse = { x: null, y: null, radius: 150 };
@@ -433,8 +437,6 @@
         animateParticles();
 
         // ===== 烟花系统 =====
-        const fireworkCanvas = document.getElementById('firework-canvas');
-        const fCtx = fireworkCanvas.getContext('2d');
 
         class FireworkParticle {
             constructor(x, y, color) {
